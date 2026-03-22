@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD → DOCX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F5F0;
+      --surface: #FFFFFF;
+      --border: #E2DED6;
+      --border-strong: #C8C3B8;
+      --text-primary: #1C1B18;
+      --text-secondary: #6B6860;
+      --text-muted: #9E9C97;
+      --accent: #2D5BE3;
+      --accent-light: #EEF2FD;
+      --accent-hover: #1E48CC;
+      --success: #1D9E75;
+      --success-light: #E1F5EE;
+      --danger: #D85A30;
+      --danger-light: #FAECE7;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .logo {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2rem;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo .arrow {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .drop-zone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .drop-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .drop-label strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .drop-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .file-selected {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--accent-light);
+      border: 1px solid #C5D3F8;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .file-selected.visible { display: flex; }
+
+    .file-selected .file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .file-clear {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 16px;
+      padding: 0 2px;
+      line-height: 1;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+    }
+    .file-clear:hover { opacity: 1; }
+
+    .convert-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      text-transform: uppercase;
+    }
+
+    .convert-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .convert-btn:active:not(:disabled) { transform: scale(0.99); }
+    .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status.visible { display: flex; }
+
+    .status.loading {
+      background: #F7F5F0;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .status.success {
+      background: var(--success-light);
+      border: 1px solid #9FE1CB;
+      color: #0F6E56;
+    }
+
+    .status.error {
+      background: var(--danger-light);
+      border: 1px solid #F5C4B3;
+      color: #993C1D;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .download-btn {
+      display: none;
+      width: 100%;
+      padding: 13px;
+      background: var(--success-light);
+      color: #0F6E56;
+      border: 1px solid #9FE1CB;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.2s;
+      text-transform: uppercase;
+    }
+
+    .download-btn:hover { background: #C5EEE0; }
+    .download-btn.visible { display: block; }
+
+    footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">md <span class="arrow">→</span> docx</div>
+      <div class="subtitle">Markdown to Word — formulas preserved</div>
+    </header>
+
+    <div class="card">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" accept=".md" id="fileInput" />
+        <div class="drop-icon">📄</div>
+        <div class="drop-label">
+          <strong>Choose a file</strong> or drag it here
+        </div>
+        <div class="drop-hint">.md files only</div>
+      </div>
+
+      <div class="file-selected" id="fileSelected">
+        <span>📝</span>
+        <span class="file-name" id="fileName"></span>
+        <button class="file-clear" id="fileClear" title="Remove">✕</button>
+      </div>
+
+      <div class="status" id="status">
+        <div class="spinner" id="spinner"></div>
+        <span id="statusText"></span>
+      </div>
+
+      <button class="convert-btn" id="convertBtn" disabled>Convert</button>
+
+      <a class="download-btn" id="downloadBtn">⬇ Download .docx</a>
+    </div>
+
+    <footer>
+      Powered by <a href="https://pandoc.org" target="_blank">Pandoc</a> · Math rendered as native OMML
+    </footer>
+  </div>
+
+  <script>
+    // ---- CONFIG: swap this for your Render backend URL after deploying ----
+    const BACKEND_URL = 'http://localhost:8000';
+    // -----------------------------------------------------------------------
+
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const fileSelected = document.getElementById('fileSelected');
+    const fileName = document.getElementById('fileName');
+    const fileClear = document.getElementById('fileClear');
+    const convertBtn = document.getElementById('convertBtn');
+    const status = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const spinner = document.getElementById('spinner');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let selectedFile = null;
+
+    function setFile(file) {
+      if (!file || !file.name.endsWith('.md')) {
+        showStatus('error', 'Only .md files are accepted.');
+        return;
+      }
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSelected.classList.add('visible');
+      convertBtn.disabled = false;
+      hideStatus();
+      downloadBtn.classList.remove('visible');
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = '';
+      fileSelected.classList.remove('visible');
+      convertBtn.disabled = true;
+      hideStatus();
+      downloadBtn.classList.remove('visible');
+    }
+
+    function showStatus(type, message) {
+      status.className = `status visible ${type}`;
+      statusText.textContent = message;
+      spinner.style.display = type === 'loading' ? 'block' : 'none';
+    }
+
+    function hideStatus() {
+      status.className = 'status';
+    }
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    fileClear.addEventListener('click', clearFile);
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      convertBtn.disabled = true;
+      downloadBtn.classList.remove('visible');
+      showStatus('loading', 'Converting — this may take a moment...');
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/convert`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(err.detail || `Server error ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const safeName = selectedFile.name.replace(/\.md$/, '.docx');
+
+        downloadBtn.href = url;
+        downloadBtn.download = safeName;
+        downloadBtn.classList.add('visible');
+
+        showStatus('success', `Converted successfully → ${safeName}`);
+      } catch (err) {
+        showStatus('error', `Error: ${err.message}`);
+      } finally {
+        convertBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

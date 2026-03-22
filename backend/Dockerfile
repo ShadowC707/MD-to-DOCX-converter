@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y pandoc && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy and install Python dependencies first (Docker caches this layer — faster rebuilds)
-COPY requirements.txt .
+COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the code

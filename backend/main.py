@@ -1,17 +1,19 @@
 import subprocess
 import tempfile
 import os
+import logging
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 
-# This allows your GitHub Pages frontend to talk to this backend
-# Without this, browsers block cross-origin requests (CORS policy)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten this later once you know your GitHub Pages URL
+    allow_origins=["*"],
     allow_methods=["POST"],
     allow_headers=["*"],
 )
@@ -25,20 +27,29 @@ async def convert(file: UploadFile):
         input_path = os.path.join(tmpdir, "input.md")
         output_path = os.path.join(tmpdir, "output.docx")
 
-        # Save uploaded file to disk
         content = await file.read()
         with open(input_path, "wb") as f:
             f.write(content)
 
-        # Run Pandoc
+        # Log what pandoc version we're running
+        version = subprocess.run(["pandoc", "--version"], capture_output=True, text=True)
+        logger.info(f"Pandoc version: {version.stdout.splitlines()[0]}")
+
         result = subprocess.run(
-            ["pandoc", input_path, "-o", output_path, "--mathml"],
+            ["pandoc", input_path, "-o", output_path],
             capture_output=True,
             text=True
         )
 
+        logger.info(f"Pandoc stdout: {result.stdout}")
+        logger.info(f"Pandoc stderr: {result.stderr}")
+        logger.info(f"Pandoc returncode: {result.returncode}")
+
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Pandoc error: {result.stderr}")
+
+        if not os.path.exists(output_path):
+            raise HTTPException(status_code=500, detail=f"Pandoc produced no output. stderr: {result.stderr}")
 
         return FileResponse(
             output_path,

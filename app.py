@@ -60,7 +60,7 @@ with col3:
     line_spacing = SPACING_OPTIONS[spacing_label]
 
 
-fix_obsidian = st.checkbox("Fix Obsidian image syntax (!\\[\\[image\\]\\] → !\\[\\](image))")
+fix_obsidian = st.checkbox("Fix Obsidian image syntax !\\[\\[image\\]\\] → !\\[\\](image))")
 
 if uploaded_file is not None:
     if st.button("Convert", type="primary"):
